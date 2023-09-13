@@ -1,0 +1,93 @@
+#include <stdio.h>
+#include <stdbool.h>
+
+#include "loragw_reg.h"
+
+#define DELAY_MS 500
+
+void lgw_pin_mode_set(uint8_t pin, bool output)
+{
+    uint16_t reg_dir, reg_sel;
+    int32_t reg_val = 0;
+
+    if (pin < 8)
+    {
+        reg_dir = SX1302_REG_GPIO_GPIO_DIR_L_DIRECTION;
+        reg_sel = SX1302_REG_GPIO_GPIO_SEL_0_SELECTION + pin;
+    }
+    else if (pin < 12)
+    {
+        reg_dir = SX1302_REG_GPIO_GPIO_DIR_H_DIRECTION;
+        reg_sel = (pin == 8) ? SX1302_REG_GPIO_GPIO_SEL_8_11_GPIO_8_SEL : SX1302_REG_GPIO_GPIO_SEL_8_11_GPIO_11_9_SEL;
+    }
+    else
+        return;
+
+    lgw_reg_w(reg_sel, 0);
+    lgw_reg_r(reg_dir, &reg_val);
+
+    if (output)
+    {
+        reg_val |= (1 << (pin % 8));
+    }
+    else
+    {
+        reg_val &= ~(1 << (pin % 8));
+    }
+
+    lgw_reg_w(reg_dir, reg_val);
+}
+
+void lgw_pin_out_write(uint8_t pin, bool high)
+{
+    uint16_t reg_out;
+    int32_t reg_val = 0;
+
+    if (pin < 8)
+    {
+        reg_out = SX1302_REG_GPIO_GPIO_OUT_L_OUT_VALUE;
+    }
+    else if (pin < 12)
+    {
+        reg_out = SX1302_REG_GPIO_GPIO_OUT_H_OUT_VALUE;
+    }
+    else
+        return;
+
+    lgw_reg_r(reg_out, &reg_val);
+
+    if (high)
+    {
+        reg_val |= (1 << (pin % 8));
+    }
+    else
+    {
+        reg_val &= ~(1 << (pin % 8));
+    }
+
+    lgw_reg_w(reg_out, reg_val);
+}
+
+int main()
+{
+    uint8_t pin = 0;  // 使用的GPIO引脚编号，根据实际情况进行调整
+
+    // 设置GPIO引脚为输出模式
+    lgw_pin_mode_set(pin, true);
+
+    while (1)
+    {
+        // 点亮当前GPIO引脚
+        lgw_pin_out_write(pin, true);
+        printf("LED ON\n");
+        delay(DELAY_MS); // 延时一段时间
+
+        // 熄灭当前GPIO引脚
+        lgw_pin_out_write(pin, false);
+        printf("LED OFF\n");
+        delay(DELAY_MS); // 延时一段时间
+    }
+
+    return 0;
+}
+
